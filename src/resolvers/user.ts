@@ -7,6 +7,7 @@ import {
   InputType,
   Mutation,
   ObjectType,
+  Query,
   Resolver
 } from 'type-graphql';
 import argon2 from 'argon2';
@@ -37,11 +38,22 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Query(() => User, { nullable: true })
+  async me(@Ctx() { em, req }: QueryContext): Promise<User | null> {
+    if (!req.session.userId) {
+      // user not logged in
+      return null;
+    }
+
+    const user = await em.findOne(User, { id: req.session.userId });
+    return user;
+  }
+
   @Mutation(() => UserResponse)
   async register(
     @Arg('options') { username, password }: UsernamePasswordInput,
     @Ctx()
-    { em }: QueryContext
+    { em, req }: QueryContext
   ): Promise<UserResponse> {
     const hashedPassword = await argon2.hash(password);
     const user = em.create(User, {
@@ -70,6 +82,10 @@ export class UserResolver {
       }
     }
 
+    // store user id session in browser cookie
+    // keep them logged in
+    req.session.userId = user.id;
+
     return { user };
   }
 
@@ -77,7 +93,7 @@ export class UserResolver {
   async login(
     @Arg('options') { username, password }: UsernamePasswordInput,
     @Ctx()
-    { em }: QueryContext
+    { em, req }: QueryContext
   ): Promise<UserResponse> {
     const user = await em.findOne(User, { username });
     if (!user) {
@@ -102,6 +118,8 @@ export class UserResolver {
         ]
       };
     }
+
+    req.session.userId = user.id;
 
     return { user };
   }
