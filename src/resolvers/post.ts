@@ -53,7 +53,8 @@ export class PostResolver {
   ): Promise<boolean> {
     try {
       await em.nativeDelete(Post, { id });
-    } catch {
+    } catch (error) {
+      console.log(`Error: ${error.message}`);
       return false;
     }
     return true;
