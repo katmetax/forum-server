@@ -48,7 +48,7 @@ export const Main = async () => {
   });
 
   const corsOptions = {
-    origin: 'https://studio.apollographql.com',
+    origin: ['https://studio.apollographql.com', 'http://localhost:3000'], // TODO: Remove apollographql origin for prod
     credentials: true
   };
 
