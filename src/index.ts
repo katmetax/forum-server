@@ -8,7 +8,7 @@ import { UserResolver } from './resolvers/user';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
 import { createClient } from 'redis';
-import { isProd } from './constants';
+import { COOKIE_NAME, isProd, sameSiteSetting } from './constants';
 import { QueryContext } from './types';
 
 const port = 4000;
@@ -26,11 +26,11 @@ export const Main = async () => {
   app.set('trust proxy', !isProd);
   app.use(
     session({
-      name: 'qid',
+      name: COOKIE_NAME,
       store: new RedisStore({ client: redisClient, disableTouch: true }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: isProd ? 'lax' : 'none', // More info for this setting here: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7
+        sameSite: sameSiteSetting, // More info for this setting here: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7
         secure: true // cookie only works in https
       },
       saveUninitialized: false,
