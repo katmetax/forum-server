@@ -11,12 +11,28 @@ import {
   Resolver
 } from 'type-graphql';
 import argon2 from 'argon2';
-import { COOKIE_NAME, sameSiteSetting } from '../constants';
+import {
+  COOKIE_NAME,
+  FORGOT_PASSWORD_PREFIX,
+  sameSiteSetting
+} from '../constants';
+import sendEmail from '../lib/sendEmail';
+import { v4 } from 'uuid';
 
 @InputType()
 class UsernamePasswordInput {
   @Field()
   username: string;
+  @Field()
+  email: string;
+  @Field()
+  password: string;
+}
+
+@InputType()
+class EmailPasswordInput {
+  @Field()
+  email: string;
   @Field()
   password: string;
 }
@@ -52,13 +68,14 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async register(
-    @Arg('options') { username, password }: UsernamePasswordInput,
+    @Arg('options') { username, email, password }: UsernamePasswordInput,
     @Ctx()
     { em, req }: QueryContext
   ): Promise<UserResponse> {
     const hashedPassword = await argon2.hash(password);
     const user = em.create(User, {
       username,
+      email,
       password: hashedPassword
     });
 
@@ -92,17 +109,17 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async login(
-    @Arg('options') { username, password }: UsernamePasswordInput,
+    @Arg('options') { email, password }: EmailPasswordInput,
     @Ctx()
     { em, req }: QueryContext
   ): Promise<UserResponse> {
-    const user = await em.findOne(User, { username });
+    const user = await em.findOne(User, { email });
     if (!user) {
       return {
         errors: [
           {
-            field: 'username',
-            message: 'username does not exist'
+            field: 'email',
+            message: 'email is not registered'
           }
         ]
       };
@@ -142,5 +159,70 @@ export class UserResolver {
         resolve(true);
       });
     });
+  }
+
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Arg('email') email: string,
+    @Ctx() { em, redis }: QueryContext
+  ) {
+    const user = await em.findOne(User, { email });
+
+    if (!user) {
+      // do nothing so emails in DB do not get phished through
+      return true;
+    }
+
+    const token = v4();
+
+    await redis.set(FORGOT_PASSWORD_PREFIX + token, user.id, 'ex', 60 * 15); // expire after 15 minutes
+
+    await sendEmail(
+      email,
+      `Click <a href="http://localhost:3000/change-password/${token}">here</a> to reset your password.`
+    );
+
+    return true;
+  }
+
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Arg('token') token: string,
+    @Arg('newPassword') newPassword: string,
+    @Ctx() { em, redis }: QueryContext
+  ): Promise<UserResponse> {
+    const key = FORGOT_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
+
+    if (!userId) {
+      return {
+        errors: [
+          {
+            field: 'token',
+            message: 'The token is expired'
+          }
+        ]
+      };
+    }
+
+    const user = await em.findOne(User, { id: parseInt(userId) });
+
+    if (!user) {
+      return {
+        errors: [
+          {
+            field: 'token',
+            message: 'User no longer exists'
+          }
+        ]
+      };
+    }
+
+    user.password = await argon2.hash(newPassword);
+    await em.persistAndFlush(user);
+
+    await redis.del(key);
+
+    return { user };
   }
 }

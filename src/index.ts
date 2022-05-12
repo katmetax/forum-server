@@ -7,7 +7,7 @@ import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
-import { createClient } from 'redis';
+import Redis from 'ioredis';
 import { COOKIE_NAME, isProd, sameSiteSetting } from './constants';
 import { QueryContext } from './types';
 
@@ -20,14 +20,13 @@ export const Main = async () => {
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redisClient = createClient({ legacyMode: true });
-  redisClient.connect().catch(console.error);
+  const redis = new Redis();
 
   app.set('trust proxy', !isProd);
   app.use(
     session({
       name: COOKIE_NAME,
-      store: new RedisStore({ client: redisClient, disableTouch: true }),
+      store: new RedisStore({ client: redis, disableTouch: true }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: sameSiteSetting, // More info for this setting here: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7
@@ -44,7 +43,7 @@ export const Main = async () => {
       resolvers: [PostResolver, UserResolver],
       validate: false
     }),
-    context: ({ req, res }): QueryContext => ({ em: orm.em, req, res })
+    context: ({ req, res }): QueryContext => ({ em: orm.em, req, res, redis })
   });
 
   const corsOptions = {
@@ -60,4 +59,4 @@ export const Main = async () => {
   });
 };
 
-Main();
+Main().catch((error) => console.log(error));
