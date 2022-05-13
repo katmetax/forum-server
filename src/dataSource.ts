@@ -12,5 +12,6 @@ export const ForumDataSource = new DataSource({
   database: 'forum2',
   logging: true,
   synchronize: !isProd,
+  // synchronize: false,
   entities: [User, Post]
 });
