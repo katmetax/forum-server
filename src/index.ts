@@ -1,21 +1,19 @@
-import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
+import connectRedis from 'connect-redis';
 import express from 'express';
+import session from 'express-session';
+import Redis from 'ioredis';
 import { buildSchema } from 'type-graphql';
-import mikroConfig from './mikro-orm.config';
+import { COOKIE_NAME, isProd, sameSiteSetting } from './constants';
+import { ForumDataSource } from './dataSource';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
-import session from 'express-session';
-import connectRedis from 'connect-redis';
-import Redis from 'ioredis';
-import { COOKIE_NAME, isProd, sameSiteSetting } from './constants';
 import { QueryContext } from './types';
 
 const port = 4000;
 
 export const Main = async () => {
-  const orm = await MikroORM.init(mikroConfig);
-  await orm.getMigrator().up();
+  await ForumDataSource.initialize();
 
   const app = express();
 
@@ -43,7 +41,7 @@ export const Main = async () => {
       resolvers: [PostResolver, UserResolver],
       validate: false
     }),
-    context: ({ req, res }): QueryContext => ({ em: orm.em, req, res, redis })
+    context: ({ req, res }): QueryContext => ({ req, res, redis })
   });
 
   const corsOptions = {

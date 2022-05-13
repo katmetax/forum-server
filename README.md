@@ -20,4 +20,5 @@ Start Redis:
 ```redis-server```
 
 Start PostgresQL:
-```psql postgres -U <username>```
+```psql forum2 -U <username>```
+N.B. You'll first need to create a database called `forum2`.

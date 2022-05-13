@@ -1,58 +1,44 @@
+import { Arg, Mutation, Query, Resolver } from 'type-graphql';
 import { Post } from '../entities/Post';
-import { QueryContext } from '../types';
-import { Arg, Ctx, Int, Mutation, Query, Resolver } from 'type-graphql';
 
 @Resolver()
 export class PostResolver {
   @Query(() => [Post])
-  posts(@Ctx() { em }: QueryContext): Promise<Post[]> {
-    return em.find(Post, {});
+  posts(): Promise<Post[]> {
+    return Post.find();
   }
 
   @Query(() => Post, { nullable: true })
-  post(
-    @Arg('id', () => Int) id: number,
-    @Ctx() { em }: QueryContext
-  ): Promise<Post | null> {
-    return em.findOne(Post, { id });
+  async post(@Arg('id') id: number): Promise<Post | null> {
+    return Post.findOneBy({ id });
   }
 
   @Mutation(() => Post)
-  async createPost(
-    @Arg('title') title: string,
-    @Ctx() { em }: QueryContext
-  ): Promise<Post> {
-    const post = em.create(Post, { title });
-    await em.persistAndFlush(post);
-    return post;
+  async createPost(@Arg('title') title: string): Promise<Post> {
+    return Post.create({ title }).save();
   }
 
   @Mutation(() => Post, { nullable: true })
   async updatePost(
     @Arg('id') id: number,
-    @Arg('title', () => String, { nullable: true }) title: string,
-    @Ctx() { em }: QueryContext
+    @Arg('title', { nullable: true }) title: string
   ): Promise<Post | null> {
-    const post = await em.findOne(Post, { id });
+    const post = await Post.findOneBy({ id });
     if (!post) {
       return null;
     }
 
     if (typeof title !== 'undefined') {
-      post.title = title;
-      await em.persistAndFlush(post);
+      await Post.update({ id }, { title });
     }
 
     return post;
   }
 
   @Mutation(() => Boolean)
-  async deletePost(
-    @Arg('id') id: number,
-    @Ctx() { em }: QueryContext
-  ): Promise<boolean> {
+  async deletePost(@Arg('id') id: number): Promise<boolean> {
     try {
-      await em.nativeDelete(Post, { id });
+      await Post.delete(id);
     } catch (error) {
       console.log(`Error: ${error.message}`);
       return false;
