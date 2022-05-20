@@ -26,12 +26,12 @@ export class Post extends BaseEntity {
   content!: string;
 
   @Field()
-  @Column({ type: 'int', default: 0 })
-  points!: number;
+  @Column()
+  creatorId!: string;
 
   @Field()
-  @Column()
-  creatorId: number;
+  @Column({ type: 'int', default: 0 })
+  points: number;
 
   @ManyToOne(() => User, (user) => user.posts)
   creator: User;

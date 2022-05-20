@@ -8,7 +8,8 @@ import {
   Mutation,
   ObjectType,
   Query,
-  Resolver
+  Resolver,
+  UseMiddleware
 } from 'type-graphql';
 import { v4 } from 'uuid';
 import {
@@ -19,6 +20,7 @@ import {
 import { User } from '../entities/User';
 import sendEmail from '../lib/sendEmail';
 import { QueryContext } from '../types';
+import { validateInput } from '../middleware/validation';
 
 @InputType()
 class UserInput {
@@ -67,6 +69,7 @@ export class UserResolver {
   }
 
   @Mutation(() => UserResponse)
+  @UseMiddleware(validateInput)
   async register(
     @Arg('options') { username, email, password }: UserInput,
     @Ctx()
@@ -110,6 +113,7 @@ export class UserResolver {
   }
 
   @Mutation(() => UserResponse)
+  @UseMiddleware(validateInput)
   async login(
     @Arg('options') { email, password }: EmailPasswordInput,
     @Ctx()
@@ -164,6 +168,7 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
+  @UseMiddleware(validateInput)
   async forgotPassword(
     @Arg('email') email: string,
     @Ctx() { redis }: QueryContext
@@ -188,6 +193,7 @@ export class UserResolver {
   }
 
   @Mutation(() => UserResponse)
+  @UseMiddleware(validateInput)
   async changePassword(
     @Arg('token') token: string,
     @Arg('newPassword') newPassword: string,

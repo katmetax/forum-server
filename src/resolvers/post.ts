@@ -11,6 +11,7 @@ import {
   UseMiddleware
 } from 'type-graphql';
 import { Post } from '../entities/Post';
+import { validateInput } from '../middleware/validation';
 
 @InputType()
 class PostInput {
@@ -33,14 +34,14 @@ export class PostResolver {
   }
 
   @Mutation(() => Post)
-  @UseMiddleware(isAuth)
+  @UseMiddleware(isAuth, validateInput)
   async createPost(
     @Arg('options') options: PostInput,
     @Ctx() { req }: QueryContext
   ): Promise<Post> {
     return Post.create({
       ...options,
-      creatorId: parseInt(req.session.id)
+      creatorId: req.session.id
     }).save();
   }
 
