@@ -1,5 +1,5 @@
-import { isAuth } from 'src/middleware/isAuth';
-import { QueryContext } from 'src/types';
+import { isAuth } from '../middleware/isAuth';
+import { QueryContext } from '../types';
 import {
   Arg,
   Ctx,

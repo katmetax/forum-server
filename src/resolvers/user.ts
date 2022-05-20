@@ -177,7 +177,7 @@ export class UserResolver {
 
     const token = v4();
 
-    await redis.set(FORGOT_PASSWORD_PREFIX + token, user.id, 'ex', 60 * 15); // expire after 15 minutes
+    await redis.set(FORGOT_PASSWORD_PREFIX + token, user.id, 'EX', 60 * 15); // expire after 15 minutes
 
     await sendEmail(
       email,
