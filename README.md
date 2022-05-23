@@ -9,6 +9,7 @@
 - Redis
 - PostgreSQL
 - MikroORM/TypeORM
+- Joi
 
 ### Requirements
 
@@ -22,3 +23,12 @@ Start Redis:
 Start PostgresQL:
 ```psql forum2 -U <username>```
 N.B. You'll first need to create a database called `forum2`.
+
+### Database
+
+**Migrating the TypeOrm DB:**
+```npx typeorm migration:create <path>```
+
+### Useful links
+
+https://www.mockaroo.com/

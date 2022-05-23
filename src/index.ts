@@ -6,6 +6,7 @@ import Redis from 'ioredis';
 import { buildSchema } from 'type-graphql';
 import { COOKIE_NAME, isProd, sameSiteSetting } from './constants';
 import { ForumDataSource } from './dataSource';
+// import { Post } from './entities/Post';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
 import { QueryContext } from './types';
@@ -14,6 +15,8 @@ const port = 4000;
 
 export const Main = async () => {
   await ForumDataSource.initialize();
+  // await ForumDataSource.runMigrations();
+  // await Post.delete({});
 
   const app = express();
 
