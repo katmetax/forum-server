@@ -52,23 +52,45 @@ export class PostResolver {
     const isUpvote = value !== -1;
     const vote = isUpvote ? 1 : -1;
     const { userId } = req.session;
-    if (userId) {
-      await ForumDataSource.createQueryBuilder().insert().into(Voting).values({
-        userId,
-        postId,
-        value: vote
-      });
+    const previouslyVoted = await ForumDataSource.getRepository(Voting).findOne(
+      { where: { postId, userId } }
+    );
+
+    if (previouslyVoted && previouslyVoted.value !== vote) {
+      await ForumDataSource.createQueryBuilder()
+        .update(Voting)
+        .set({
+          value: vote
+        })
+        .where({ postId, userId })
+        .execute();
+      await ForumDataSource.createQueryBuilder()
+        .update(Post)
+        .set({
+          points: () => `points + ${vote * 2}`
+        })
+        .where({ id: postId })
+        .execute();
+    } else if (!previouslyVoted) {
+      await ForumDataSource.createQueryBuilder()
+        .insert()
+        .into(Voting)
+        .values({
+          userId,
+          postId,
+          value: vote
+        })
+        .execute();
       await ForumDataSource.createQueryBuilder()
         .update(Post)
         .set({
           points: () => `points + ${vote}`
         })
-        .where(`id = ${postId}`)
+        .where({ id: postId })
         .execute();
-      return true;
     }
 
-    return false;
+    return true;
   }
 
   @Query(() => PaginatedPosts)
