@@ -17,6 +17,7 @@ import {
 import { Post } from '../entities/Post';
 import { validateInput } from '../middleware/validation';
 import { ForumDataSource } from '../dataSource';
+import { Voting } from '../entities/Voting';
 
 @InputType()
 class PostInput {
@@ -41,6 +42,35 @@ export class PostResolver {
     return root.content.slice(0, 50);
   }
 
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg('postId', () => Int) postId: number,
+    @Arg('value', () => Int) value: number,
+    @Ctx() { req }: QueryContext
+  ) {
+    const isUpvote = value !== -1;
+    const vote = isUpvote ? 1 : -1;
+    const { userId } = req.session;
+    if (userId) {
+      await ForumDataSource.createQueryBuilder().insert().into(Voting).values({
+        userId,
+        postId,
+        value: vote
+      });
+      await ForumDataSource.createQueryBuilder()
+        .update(Post)
+        .set({
+          points: () => `points + ${vote}`
+        })
+        .where(`id = ${postId}`)
+        .execute();
+      return true;
+    }
+
+    return false;
+  }
+
   @Query(() => PaginatedPosts)
   async posts(
     @Arg('limit', () => Int) limit: number,
@@ -48,16 +78,31 @@ export class PostResolver {
   ): Promise<PaginatedPosts> {
     const realLimit = Math.min(50, limit);
     const realLimitPlusOne = realLimit + 1;
-    const qb = await ForumDataSource.getRepository(Post)
-      .createQueryBuilder('p')
-      .orderBy('"createdAt"', 'DESC')
-      .take(realLimitPlusOne);
+
+    const replacements: any[] = [realLimitPlusOne];
 
     if (cursor) {
-      qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) });
+      replacements.push(new Date(parseInt(cursor)));
     }
 
-    const posts = await qb.getMany();
+    const posts = await ForumDataSource.query(
+      `
+      select p.*,
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'createdAt', u."createdAt",
+        'updatedAt', u."updatedAt"
+        ) creator
+      from post p
+      inner join public.user u on u.id = p."creatorId"
+      ${cursor ? 'where p."createdAt" < $2' : ''}
+      order by p."createdAt" DESC
+      limit $1
+    `,
+      replacements
+    );
 
     return {
       posts: posts.slice(0, realLimit),
@@ -78,7 +123,7 @@ export class PostResolver {
   ): Promise<Post> {
     return Post.create({
       ...options,
-      creatorId: String(req.session.id)
+      creatorId: req.session.userId
     }).save();
   }
 

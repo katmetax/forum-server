@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { isProd } from './constants';
 import { Post } from './entities/Post';
 import { User } from './entities/User';
+import { Voting } from './entities/Voting';
 
 export const ForumDataSource = new DataSource({
   type: 'postgres',
@@ -13,5 +14,5 @@ export const ForumDataSource = new DataSource({
   logging: true,
   synchronize: !isProd,
   migrations: [path.join(__dirname, './migrations/*')],
-  entities: [User, Post]
+  entities: [User, Post, Voting]
 });

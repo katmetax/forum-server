@@ -4,11 +4,13 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
   UseMiddleware
 } from 'type-graphql';
 import { v4 } from 'uuid';
@@ -56,8 +58,18 @@ class UserResponse {
   user?: User;
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+  @FieldResolver()
+  email(@Root() user: User, @Ctx() { req }: QueryContext) {
+    // this is the current user so its ok to show them their email
+    if (req.session.userId === user.id) {
+      return user.email;
+    }
+    // do not show other user emails
+    return '';
+  }
+
   @Query(() => User, { nullable: true })
   me(@Ctx() { req }: QueryContext): Promise<User | null> | null {
     if (!req.session.userId) {

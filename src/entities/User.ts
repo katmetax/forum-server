@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Entity } from 'typeorm/decorator/entity/Entity';
 import { Post } from './Post';
+import { Voting } from './Voting';
 
 @ObjectType()
 @Entity()
@@ -30,6 +31,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Post, (post) => post.creator)
   posts: Post[];
+
+  @OneToMany(() => Voting, (voting) => voting.user)
+  votes: Voting[];
 
   @Field(() => String)
   @CreateDateColumn()
