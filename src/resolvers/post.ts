@@ -150,7 +150,7 @@ export class PostResolver {
   }
 
   @Query(() => Post, { nullable: true })
-  async post(@Arg('id') id: number): Promise<Post | null> {
+  async post(@Arg('id', () => Int) id: number): Promise<Post | null> {
     return Post.findOneBy({ id });
   }
 
@@ -184,9 +184,13 @@ export class PostResolver {
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg('id') id: number): Promise<boolean> {
+  @UseMiddleware(isAuth)
+  async deletePost(
+    @Arg('id', () => Int) id: number,
+    @Ctx() { req }: QueryContext
+  ): Promise<boolean> {
     try {
-      await Post.delete(id);
+      await Post.delete({ id, creatorId: req.session.userId });
     } catch (error) {
       console.log(`Error: ${error.message}`);
       return false;
