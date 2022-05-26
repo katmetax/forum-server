@@ -18,6 +18,7 @@ import { Post } from '../entities/Post';
 import { validateInput } from '../middleware/validation';
 import { ForumDataSource } from '../dataSource';
 import { Voting } from '../entities/Voting';
+import { User } from '../entities/User';
 
 @InputType()
 class PostInput {
@@ -40,6 +41,30 @@ export class PostResolver {
   @FieldResolver(() => String)
   contentSnippet(@Root() root: Post) {
     return root.content.slice(0, 50);
+  }
+
+  @FieldResolver(() => User)
+  creator(@Root() post: Post, @Ctx() { userLoader }: QueryContext) {
+    return userLoader.load(post.creatorId);
+  }
+
+  @FieldResolver(() => Int, { nullable: true })
+  async voteStatus(
+    @Root() post: Post,
+    @Ctx() { votingLoader, req }: QueryContext
+  ) {
+    const { userId } = req.session;
+
+    if (!userId) {
+      return null;
+    }
+
+    const vote = await votingLoader.load({
+      postId: post.id,
+      userId: userId
+    });
+
+    return vote ? vote.value : null;
   }
 
   @Mutation(() => Boolean)
@@ -109,16 +134,8 @@ export class PostResolver {
 
     const posts = await ForumDataSource.query(
       `
-      select p.*,
-      json_build_object(
-        'id', u.id,
-        'username', u.username,
-        'email', u.email,
-        'createdAt', u."createdAt",
-        'updatedAt', u."updatedAt"
-        ) creator
+      select p.*
       from post p
-      inner join public.user u on u.id = p."creatorId"
       ${cursor ? 'where p."createdAt" < $2' : ''}
       order by p."createdAt" DESC
       limit $1

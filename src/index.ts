@@ -10,6 +10,8 @@ import { ForumDataSource } from './dataSource';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
 import { QueryContext } from './types';
+import { createUserLoader } from './utils/createUserLoader';
+import { createVotingLoader } from './utils/createVotingLoader';
 
 const port = 4000;
 
@@ -44,7 +46,13 @@ export const Main = async () => {
       resolvers: [PostResolver, UserResolver],
       validate: false
     }),
-    context: ({ req, res }): QueryContext => ({ req, res, redis })
+    context: ({ req, res }): QueryContext => ({
+      req,
+      res,
+      redis,
+      userLoader: createUserLoader(),
+      votingLoader: createVotingLoader()
+    })
   });
 
   const corsOptions = {
