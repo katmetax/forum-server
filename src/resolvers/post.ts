@@ -167,20 +167,21 @@ export class PostResolver {
   }
 
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
     @Arg('id') id: number,
-    @Arg('title', { nullable: true }) title: string
+    @Arg('title') title: string,
+    @Arg('content') content: string,
+    @Ctx() { req }: QueryContext
   ): Promise<Post | null> {
-    const post = await Post.findOneBy({ id });
-    if (!post) {
-      return null;
-    }
+    const result = await ForumDataSource.createQueryBuilder()
+      .update(Post)
+      .set({ title, content })
+      .where(`id = ${id} and "creatorId" = ${req.session.userId}`)
+      .returning('*')
+      .execute();
 
-    if (typeof title !== 'undefined') {
-      await Post.update({ id }, { title });
-    }
-
-    return post;
+    return result.raw[0];
   }
 
   @Mutation(() => Boolean)
